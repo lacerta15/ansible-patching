@@ -1,0 +1,38 @@
+---
+- name: Pre-patch checks
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check disk space (need > 2GB free)
+      assert:
+        that: item.size_available > 2147483648
+        fail_msg: "Not enough disk space on {{ item.mount }}"
+      loop: "{{ ansible_mounts }}"
+      when: item.mount in ['/', '/var', '/boot']
+
+    - name: Check for running critical services
+      service_facts:
+
+    - name: Warn if httpd/nginx are running
+      debug:
+        msg: "WARNING: {{ item }} is running - schedule downtime"
+      when: services[item ~ '.service'] is defined and
+            services[item ~ '.service'].state == 'running'
+      loop:
+        - httpd
+        - nginx
+        - mysqld
+        - postgresql
+
+    - name: Record current kernel
+      command: uname -r
+      register: current_kernel
+      changed_when: false
+
+    - name: Save pre-patch info
+      copy:
+        content: |
+          Hostname: {{ inventory_hostname }}
+          Kernel: {{ current_kernel.stdout }}
+          Date: {{ ansible_date_time.iso8601 }}
+        dest: /tmp/pre_patch_info.txt

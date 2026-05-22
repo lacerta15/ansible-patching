@@ -1,0 +1,5 @@
+patch_reboot: true
+patch_reboot_timeout: 600
+patch_pre_snapshot: false
+patch_notify_slack: false
+slack_webhook_url: ""

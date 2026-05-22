@@ -1,0 +1,33 @@
+---
+- name: Post-patch checks
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Record new kernel
+      command: uname -r
+      register: new_kernel
+      changed_when: false
+
+    - name: Show kernel upgrade
+      debug:
+        msg: "New kernel: {{ new_kernel.stdout }}"
+
+    - name: Check all systemd services
+      command: systemctl is-system-running
+      register: system_state
+      failed_when: system_state.rc > 1
+      changed_when: false
+
+    - name: Report system state
+      debug:
+        msg: "System state: {{ system_state.stdout }}"
+
+    - name: Check failed services
+      command: systemctl list-units --failed --no-legend
+      register: failed_svcs
+      changed_when: false
+
+    - name: Show failed services
+      debug:
+        msg: "{{ failed_svcs.stdout_lines }}"
+      when: failed_svcs.stdout != ''

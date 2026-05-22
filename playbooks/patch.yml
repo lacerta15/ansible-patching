@@ -1,0 +1,32 @@
+---
+- name: Apply patches
+  hosts: all
+  serial: 1
+  gather_facts: false
+  tasks:
+    - name: Run pre-patch checks
+      import_playbook: pre_patch_checks.yml
+
+    - name: Update all packages (RHEL/CentOS)
+      yum:
+        name: '*'
+        state: latest
+        update_cache: yes
+      when: ansible_os_family == 'RedHat'
+
+    - name: Check if reboot required
+      command: needs-restarting -r
+      register: needs_reboot
+      failed_when: false
+      changed_when: false
+
+    - name: Reboot if needed
+      reboot:
+        reboot_timeout: "{{ patch_reboot_timeout }}"
+        msg: "Rebooting for patching"
+      when:
+        - patch_reboot | bool
+        - needs_reboot.rc == 1
+
+    - name: Run post-patch checks
+      import_playbook: post_patch_checks.yml
